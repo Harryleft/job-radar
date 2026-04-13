@@ -1,0 +1,32 @@
+# Job Detect — 用户配置文件模板
+# 使用 `job-detect init` 自动生成，或手动填写
+
+skills:
+  - Python
+  - SQL
+  - 数据分析
+  - 产品设计
+
+experience:
+  years: 5
+  level: mid-senior
+
+preferences:
+  cities: [上海, 北京, 深圳]
+  salary_min: 15K
+  salary_max: 35K
+  industries: [互联网, 金融科技]
+
+target_roles:
+  - 数据分析师
+  - 产品经理
+  - 数据产品经理
+
+# 评分权重（可选，默认 40/30/30）
+# scoring:
+#   skill: 0.4
+#   experience: 0.3
+#   salary: 0.3
+
+# BOSS直聘 cookie（预留，用于后续自动化采集）
+# boss_cookie: ""

@@ -1,0 +1,79 @@
+python:
+  - python3
+  - python 3
+  - python3.x
+sql:
+  - mysql
+  - postgresql
+  - sqlite
+  - oracle
+  - mssql
+数据分析:
+  - 数据挖掘
+  - data analysis
+  - data analytics
+产品经理:
+  - 产品设计
+  - 产品规划
+  - product manager
+  - pm
+前端:
+  - frontend
+  - 前端开发
+  - 前端工程师
+  - web前端
+后端:
+  - backend
+  - 后端开发
+  - 后端工程师
+  - 服务端
+java:
+  - java8
+  - java11
+  - jdk
+javascript:
+  - js
+  - es6
+typescript:
+  - ts
+react:
+  - react.js
+  - reactjs
+vue:
+  - vue.js
+  - vuejs
+  - vue3
+node.js:
+  - node
+  - nodejs
+机器学习:
+  - machine learning
+  - ml
+  - 深度学习
+  - deep learning
+  - dl
+数据可视化:
+  - 可视化
+  - data visualization
+  - tableau
+  - power bi
+  - echarts
+excel:
+  - ms office
+  - 办公软件
+  - spreadsheets
+docker:
+  - container
+  - 容器
+kubernetes:
+  - k8s
+linux:
+  - shell
+  - bash
+  - ubuntu
+  - centos
+go:
+  - golang
+c++:
+  - cpp
+  - c/c++

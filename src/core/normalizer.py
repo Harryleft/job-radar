@@ -23,13 +23,19 @@ def _build_lookup() -> dict[str, str]:
 
     config = _load_aliases()
     for canonical, aliases in config.items():
+        if not isinstance(canonical, str):
+            continue
         # canonical 自身也加入查找表
         lookup[canonical.lower()] = canonical
         if isinstance(aliases, list):
-            for alias in aliases:
-                lookup[alias.lower()] = canonical
+            items = aliases
         elif isinstance(aliases, str):
-            lookup[aliases.lower()] = canonical
+            items = [aliases]
+        else:
+            continue
+        for alias in items:
+            if isinstance(alias, str) and alias.strip():
+                lookup[alias.strip().lower()] = canonical
 
     return lookup
 
@@ -41,6 +47,9 @@ def _load_aliases() -> dict[str, list[str] | str]:
         config_ref = resources.files("src.config").joinpath("skill_aliases.yaml")
         config_text = config_ref.read_text(encoding="utf-8")
         return yaml.safe_load(config_text) or {}
+    except yaml.YAMLError as exc:
+        logger.warning("skill_aliases.yaml 解析失败: %s", exc)
+        return {}
     except (FileNotFoundError, TypeError, ModuleNotFoundError, ImportError):
         pass
 
@@ -51,8 +60,12 @@ def _load_aliases() -> dict[str, list[str] | str]:
     ]
     for path in candidates:
         if path.exists():
-            with open(path, encoding="utf-8") as f:
-                return yaml.safe_load(f) or {}
+            try:
+                with open(path, encoding="utf-8") as f:
+                    return yaml.safe_load(f) or {}
+            except yaml.YAMLError as exc:
+                logger.warning("skill_aliases.yaml 解析失败 (%s): %s", path, exc)
+                return {}
 
     logger.warning("skill_aliases.yaml 未找到，技能归一化将使用原始名称")
     return {}

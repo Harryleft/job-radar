@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
 class Job(BaseModel):
@@ -44,11 +44,18 @@ class Preferences(BaseModel):
 
 
 class ScoringWeights(BaseModel):
-    skill: float = 0.3
-    experience: float = 0.25
-    salary: float = 0.2
-    education: float = 0.1
-    company: float = 0.15
+    skill: float = Field(0.3, ge=0)
+    experience: float = Field(0.25, ge=0)
+    salary: float = Field(0.2, ge=0)
+    education: float = Field(0.1, ge=0)
+    company: float = Field(0.15, ge=0)
+
+    @model_validator(mode="after")
+    def _validate_weights(self) -> ScoringWeights:
+        total = self.skill + self.experience + self.salary + self.education + self.company
+        if total <= 0:
+            raise ValueError("ScoringWeights: 至少需要一个正权重")
+        return self
 
 
 class UserProfile(BaseModel):
@@ -67,7 +74,7 @@ class MatchResult(BaseModel):
     """单岗位评分结果"""
 
     total_score: float  # 0-100 综合分
-    skill_overlap: float  # 0-1 技能重叠度
+    skill_overlap: float | None  # 0-1 或 None（岗位无技能标签时）
     experience_match: float | None  # 0-1 或 None（经验不限/无法解析时）
     salary_fit: float | None  # 0-1 或 None（面议/无法解析时）
     education_match: float | None  # 0-1 或 None（学历不限/无法解析时）

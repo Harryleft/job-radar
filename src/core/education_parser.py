@@ -52,8 +52,9 @@ def parse_education(edu_desc: str | None) -> int | None:
         return _EDU_LEVELS[text]
 
     # 模糊匹配: "硕士及以上" → 取 "硕士"
-    for keyword, level in _EDU_LEVELS.items():
-        if keyword in text:
-            return level
+    # 多关键词时取最低门槛（如 "本科及以上，硕士优先" → 本科=4）
+    matches = [level for keyword, level in _EDU_LEVELS.items() if keyword in text]
+    if matches:
+        return min(matches)
 
     return None

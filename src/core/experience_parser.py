@@ -17,11 +17,11 @@ from __future__ import annotations
 import re
 
 # "3-5年", "1-3年"
-_RANGE_PATTERN = re.compile(r"(\d+)\s*[-–—]\s*(\d+)\s*年")
+_RANGE_PATTERN = re.compile(r"^\s*(\d+)\s*[-–—]\s*(\d+)\s*年\s*$")
 # "5年以上", "10年以上"
-_PLUS_PATTERN = re.compile(r"(\d+)\s*年\s*以\s*上")
+_PLUS_PATTERN = re.compile(r"^\s*(\d+)\s*年\s*以\s*上")
 # "1年以下"
-_UNDER_PATTERN = re.compile(r"(\d+)\s*年\s*以\s*下")
+_UNDER_PATTERN = re.compile(r"^\s*(\d+)\s*年\s*以\s*下")
 
 _NO_LIMIT = {"经验不限", "不限", "经验不限/"}
 _FRESH_GRAD = {"应届生", "在校生", "应届"}
@@ -45,18 +45,21 @@ def parse_experience(exp_desc: str | None) -> tuple[int, int] | None:
         return (0, 0)
 
     # "X年以下"
-    m = _UNDER_PATTERN.match(stripped)
+    m = _UNDER_PATTERN.fullmatch(stripped)
     if m:
         return (0, int(m.group(1)))
 
     # "X年以上"
-    m = _PLUS_PATTERN.match(stripped)
+    m = _PLUS_PATTERN.fullmatch(stripped)
     if m:
         return (int(m.group(1)), 999)
 
     # "X-Y年"
-    m = _RANGE_PATTERN.match(stripped)
+    m = _RANGE_PATTERN.fullmatch(stripped)
     if m:
-        return (int(m.group(1)), int(m.group(2)))
+        low, high = int(m.group(1)), int(m.group(2))
+        if low > high:
+            return None
+        return (low, high)
 
     return None

@@ -17,7 +17,7 @@ import re
 from src.data.models import SalaryRange
 
 # 匹配: 数字-数字K/K，可选·数字薪
-_PATTERN = re.compile(r"(\d+)\s*[-–—]\s*(\d+)\s*[Kk](?:\s*[·.]\s*(\d+)\s*薪)?")
+_PATTERN = re.compile(r"^\s*(\d+)\s*[-–—]\s*(\d+)\s*[Kk](?:\s*[·.]\s*(\d+)\s*薪)?\s*$")
 
 
 def parse_salary(salary_desc: str | None) -> SalaryRange | None:
@@ -34,7 +34,7 @@ def parse_salary(salary_desc: str | None) -> SalaryRange | None:
     if stripped in ("面议", "薪资面议"):
         return None
 
-    match = _PATTERN.match(stripped)
+    match = _PATTERN.fullmatch(stripped)
     if not match:
         return None
 
@@ -42,7 +42,7 @@ def parse_salary(salary_desc: str | None) -> SalaryRange | None:
     max_k = int(match.group(2))
     months = int(match.group(3)) if match.group(3) else 12
 
-    if min_k <= 0 or max_k <= 0 or min_k > max_k:
+    if min_k <= 0 or max_k <= 0 or min_k > max_k or months <= 0:
         return None
 
     return SalaryRange(

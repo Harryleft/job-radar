@@ -1,7 +1,7 @@
 """可插拔评分器接口 + 规则引擎实现
 
-公式: total = w_skill * skill_overlap + w_exp * experience_match + w_salary * salary_fit
-权重可配置（默认 40/30/30）。缺失信号时按比例重分配权重。
+5 维评分: skill, experience, salary, education, company quality
+权重可配置（默认 30/25/20/10/15）。缺失信号时按比例重分配权重。
 """
 
 from __future__ import annotations
@@ -23,7 +23,7 @@ class BaseScorer(ABC):
 class RuleBasedScorer(BaseScorer):
     """MVP 规则评分器
 
-    3 个信号: skill_overlap, experience_match, salary_fit
+    5 个信号: skill_overlap, experience_match, salary_fit, education_match, company_quality
     缺失信号时按比例重分配权重到其他信号
     """
 
@@ -41,7 +41,10 @@ class RuleBasedScorer(BaseScorer):
         matched = job_skill_set & profile_skill_set
         missing = job_skill_set - profile_skill_set
 
-        skill_overlap = len(matched) / len(job_skill_set) if job_skill_set else 0.0
+        # 岗位无技能标签 → 信号缺失而非 0 分
+        skill_overlap: float | None = (
+            len(matched) / len(job_skill_set) if job_skill_set else None
+        )
 
         # --- Experience match ---
         exp_range = parse_experience(job.job_experience)
@@ -57,31 +60,20 @@ class RuleBasedScorer(BaseScorer):
         else:
             experience_match = None
 
-        # --- Salary fit ---
+        # --- Salary fit (区间重叠算法) ---
         job_salary = parse_salary(job.salary_desc)
-        has_salary_pref = (
-            profile.preferences.salary_min > 0 or profile.preferences.salary_max > 0
-        )
-        if job_salary is not None and has_salary_pref:
-            expected_min = profile.preferences.salary_min
-            expected_max = profile.preferences.salary_max
-            salary_sum = expected_min + expected_max
-            expected_mid = salary_sum / 2 if salary_sum > 0 else 0
+        expected_min = profile.preferences.salary_min
+        expected_max = profile.preferences.salary_max
+        has_salary_pref = expected_min > 0 or expected_max > 0
 
-            if expected_mid <= 0:
-                salary_fit = None
-            elif job_salary.min_monthly <= expected_mid <= job_salary.max_monthly:
-                salary_fit = 1.0
-            elif expected_mid < job_salary.min_monthly:
-                salary_fit = (
-                    expected_mid / job_salary.min_monthly
-                    if job_salary.min_monthly > 0
-                    else 0.0
-                )
-            else:
-                salary_fit = (
-                    job_salary.max_monthly / expected_mid if expected_mid > 0 else 0.0
-                )
+        if job_salary is not None and has_salary_pref:
+            lower = expected_min or 0
+            upper = expected_max if expected_max > 0 else float("inf")
+            job_lo = job_salary.min_monthly
+            job_hi = job_salary.max_monthly
+            overlap = max(0, min(upper, job_hi) - max(lower, job_lo))
+            span = max(job_hi - job_lo, 1)
+            salary_fit = overlap / span
         else:
             salary_fit = None
 
@@ -98,7 +90,7 @@ class RuleBasedScorer(BaseScorer):
 
         return MatchResult(
             total_score=round(total * 100, 1),
-            skill_overlap=round(skill_overlap, 3),
+            skill_overlap=round(skill_overlap, 3) if skill_overlap is not None else None,
             experience_match=round(experience_match, 3) if experience_match is not None else None,
             salary_fit=round(salary_fit, 3) if salary_fit is not None else None,
             education_match=round(education_match, 3) if education_match is not None else None,
@@ -145,19 +137,18 @@ class RuleBasedScorer(BaseScorer):
             "1000-9999人": 0.8,
             "500-999人": 0.6,
             "100-499人": 0.5,
-            "0-99人": 0.3,
             "20-99人": 0.35,
             "0-19人": 0.3,
+            "0-99人": 0.3,
         }
         if not scale:
             return None
-        # 精确匹配
         if scale in mapping:
             return mapping[scale]
-        # 模糊匹配: 包含关键词
-        for key, val in mapping.items():
+        # 模糊匹配: 按键长度降序，避免 "20-99人" 先命中 "0-99人"
+        for key in sorted(mapping, key=len, reverse=True):
             if key in scale:
-                return val
+                return mapping[key]
         return None
 
     @staticmethod
@@ -184,7 +175,7 @@ class RuleBasedScorer(BaseScorer):
 
     def _compute_total(
         self,
-        skill_overlap: float,
+        skill_overlap: float | None,
         experience_match: float | None,
         salary_fit: float | None,
         education_match: float | None = None,
@@ -193,7 +184,8 @@ class RuleBasedScorer(BaseScorer):
         """计算加权总分，缺失信号按比例重分配权重"""
         signals: list[tuple[float, float]] = []  # (weight, value)
 
-        signals.append((self.weights.skill, skill_overlap))
+        if skill_overlap is not None:
+            signals.append((self.weights.skill, skill_overlap))
         if experience_match is not None:
             signals.append((self.weights.experience, experience_match))
         if salary_fit is not None:

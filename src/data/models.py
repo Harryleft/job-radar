@@ -23,25 +23,6 @@ class Job(BaseModel):
     job_description: str = Field(alias="postDescription", default="")
 
 
-class BossCliExport(BaseModel):
-    """boss-cli export 命令输出的 envelope 格式"""
-
-    model_config = ConfigDict(populate_by_name=True)
-
-    ok: bool = True
-    schema_version: str = Field(alias="schema_version", default="1")
-    data: BossCliData | list[Job] = Field(default_factory=lambda: [])
-
-
-class BossCliData(BaseModel):
-    """boss-cli data 字段（含 jobList 的结构）"""
-
-    model_config = ConfigDict(populate_by_name=True)
-
-    job_list: list[Job] = Field(alias="jobList", default_factory=list)
-    has_more: bool = Field(alias="hasMore", default=False)
-
-
 class SalaryRange(BaseModel):
     """解析后的薪资区间"""
 

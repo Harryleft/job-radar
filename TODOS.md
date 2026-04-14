@@ -148,6 +148,18 @@
 - **Where:** Design doc
 - **Effort:** XS (human: ~30min / CC: ~3min)
 
+## P1.5 (体验优化)
+
+### Cookie 快速提取工具
+- **What:** 在 BOSS 直聘页面上运行一段 JS，一键提取 `__zp_stoken__`、`wt2`、`wbg`、`zp_at` 四个 cookie 并格式化输出。
+- **Why:** `wt2`/`wbg`/`zp_at` 设了 HttpOnly，`document.cookie` 读不到。Application 面板无法批量复制。每次 cookie 过期（约 7 天）手动操作太痛苦。
+- **可行方案:**
+  1. 写一个 Tampermonkey 油猴脚本，通过 GM_cookie API 读取 HttpOnly cookie
+  2. 或写一个 Chrome 扩展，用 `chrome.cookies.getAll()` 提取并一键复制
+  3. 或在 job-detect CLI 中加 `job-detect login` 命令，自动从浏览器 cookie 数据库文件提取（Windows 下 Chrome cookie 存在 `%LOCALAPPDATA%\Google\Chrome\User Data\Default\Cookies`，需要解密）
+- **Where:** 独立工具或 `src/cli/main.py` 新命令
+- **Effort:** M (human: ~4h / CC: ~30min)
+
 ## Phase 2 (after MVP validation)
 
 ### Learning Path Recommendation

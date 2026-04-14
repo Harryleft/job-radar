@@ -1,0 +1,31 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+dist/
+build/
+.venv/
+venv/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data — 含简历、BOSS直聘采集数据等敏感信息
+data/resumes/
+data/profiles/
+data/real_jobs.json
+data/hangzhou_jobs.json
+data/report_data.json
+
+# Generated reports
+reports/
+
+# Claude Code / GStack
+.claude/

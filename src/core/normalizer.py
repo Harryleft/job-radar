@@ -41,7 +41,7 @@ def _load_aliases() -> dict[str, list[str] | str]:
         config_ref = resources.files("src.config").joinpath("skill_aliases.yaml")
         config_text = config_ref.read_text(encoding="utf-8")
         return yaml.safe_load(config_text) or {}
-    except (FileNotFoundError, TypeError):
+    except (FileNotFoundError, TypeError, ModuleNotFoundError, ImportError):
         pass
 
     # fallback: 相对于项目根目录

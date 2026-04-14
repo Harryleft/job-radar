@@ -1,16 +1,16 @@
 # Repository Guidelines
 
 ## Project Structure & Module Organization
-`src/` 是主代码目录，按领域拆分为 `ai/`、`analysis/`、`cli/`、`core/`、`data/`、`report/`。CLI 入口在 `src/cli/main.py`。测试放在 `tests/`，目录结构尽量与 `src/` 对齐，例如 `src/core/scorer.py` 对应 `tests/core/test_scorer.py`。辅助脚本放在 `scripts/`，样例输入优先使用 `data/samples/`，生成的 HTML 报告输出到 `reports/`。
+`src/` contains the application code, grouped by domain: `ai/`, `analysis/`, `cli/`, `core/`, `data/`, and `report/`. The CLI entrypoint lives in `src/cli/main.py`. Keep tests under `tests/` and mirror the source layout where possible, for example `src/core/scorer.py` with `tests/core/test_scorer.py`. Utility scripts belong in `scripts/`. Use `data/samples/` for safe example inputs, and treat `reports/` as generated output rather than source.
 
 ## Build, Test, and Development Commands
-先安装开发依赖：
+Install development dependencies first:
 
 ```bash
 pip install -e ".[dev]"
 ```
 
-常用命令：
+Common commands:
 
 ```bash
 pytest
@@ -20,16 +20,19 @@ ruff format src/ tests/
 python -m src.cli.main --help
 ```
 
-`pytest` 运行全部测试；第二条命令用于快速定位单文件失败；`ruff` 负责检查与格式化；`python -m src.cli.main` 用于开发态调试 CLI。
+`pytest` runs the full suite. The single-file example is useful for fast debugging. `ruff check` enforces lint rules, and `ruff format` applies the repository style. `python -m src.cli.main --help` is the quickest way to inspect CLI behavior during development before installing the package script.
 
 ## Coding Style & Naming Conventions
-使用 Python 3.10+，缩进为 4 个空格，行宽遵循 Ruff 配置的 100。包导入使用绝对路径，不使用相对导入。模块、函数、文件名使用 `snake_case`，类名使用 `PascalCase`。新功能优先放入已有领域目录，避免在根目录堆积脚本或通用逻辑。
+Use Python 3.10+, 4-space indentation, and the Ruff line length of 100. Prefer absolute imports across packages. Use `snake_case` for modules, files, and functions, and `PascalCase` for classes. Add new code to the closest existing domain package instead of creating generic helpers at the repository root.
 
 ## Testing Guidelines
-统一使用 `pytest`，测试文件命名为 `test_*.py`。新增功能时，优先覆盖评分规则、解析器、数据加载、CLI 分支和 AI 适配层的边界情况。提交前至少运行受影响目录的测试；修改核心匹配逻辑时，建议直接运行 `pytest` 全量验证。
+Use `pytest` for all tests and name files `test_*.py`. New work should cover edge cases in scoring rules, parsers, data loading, CLI branches, and AI adapters. Run focused tests while iterating, then run `pytest` before merging changes that affect matching, recommendation, or report generation.
 
 ## Commit & Pull Request Guidelines
-当前历史以简洁前缀开头，如 `feat:`、`refactor:`。建议继续使用祈使式摘要，例如 `fix: handle empty salary range`。PR 说明应包含：变更目的、影响模块、测试命令与结果；如果修改 CLI 输出或 HTML 报告，附上示例输出或截图。
+Recent history uses short prefixes such as `feat:` and `refactor:`. Keep commit messages concise and imperative, for example `fix: handle empty salary range`. Pull requests should state the goal, affected modules, and test commands run. Include sample output or screenshots when CLI behavior or generated HTML reports change.
 
 ## Security & Configuration Tips
-AI 能力依赖环境变量 `ZHIPU_API_KEY`。不要提交真实简历、抓取到的岗位原始数据或生成报告；演示和测试请优先使用 `data/samples/` 中的样例文件。
+AI features require the `ZHIPU_API_KEY` environment variable. Do not commit real resumes, scraped job data, or generated reports. Prefer sample fixtures from `data/samples/` when writing tests, examples, or bug reproductions.
+
+## Contributor Workflow Notes
+Reuse the current package boundaries whenever possible: scoring belongs in `src/core/`, market summaries in `src/analysis/`, and HTML rendering in `src/report/`. When behavior changes, update the matching tests and refresh any relevant command examples in `README.md`. Scripts in `scripts/` should remain runnable and should not accumulate one-off debugging code.

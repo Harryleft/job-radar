@@ -408,6 +408,12 @@ def _build_report_data(
                 "salary_fit": round(result.salary_fit * 100)
                 if result.salary_fit
                 else None,
+                "education_match": round(result.education_match * 100)
+                if result.education_match
+                else None,
+                "company_quality": round(result.company_quality * 100)
+                if result.company_quality
+                else None,
                 "matched_skills": result.matched_skills[:6],
                 "missing_skills": result.missing_skills[:4],
                 "city_name": job.city_name,
@@ -550,6 +556,10 @@ def _print_path_comparison(
                     dims.append(f"经验 {result.experience_match:.0%}")
                 if result.salary_fit is not None:
                     dims.append(f"薪资 {result.salary_fit:.0%}")
+                if result.education_match is not None:
+                    dims.append(f"学历 {result.education_match:.0%}")
+                if result.company_quality is not None:
+                    dims.append(f"公司 {result.company_quality:.0%}")
                 if dims:
                     console.print(f"      维度: {' / '.join(dims)}")
                 # 技能详情

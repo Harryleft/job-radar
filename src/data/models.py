@@ -44,14 +44,17 @@ class Preferences(BaseModel):
 
 
 class ScoringWeights(BaseModel):
-    skill: float = 0.4
-    experience: float = 0.3
-    salary: float = 0.3
+    skill: float = 0.3
+    experience: float = 0.25
+    salary: float = 0.2
+    education: float = 0.1
+    company: float = 0.15
 
 
 class UserProfile(BaseModel):
     skills: list[str] = Field(default_factory=list)
     experience: ExperienceInfo = Field(default_factory=ExperienceInfo)
+    education: str = ""  # 最高学历，如 "硕士"、"本科"
     preferences: Preferences = Field(default_factory=Preferences)
     target_roles: list[str] = Field(default_factory=list)
     scoring: ScoringWeights = Field(default_factory=ScoringWeights)
@@ -67,5 +70,7 @@ class MatchResult(BaseModel):
     skill_overlap: float  # 0-1 技能重叠度
     experience_match: float | None  # 0-1 或 None（经验不限/无法解析时）
     salary_fit: float | None  # 0-1 或 None（面议/无法解析时）
+    education_match: float | None  # 0-1 或 None（学历不限/无法解析时）
+    company_quality: float | None  # 0-1 或 None（公司信息缺失时）
     matched_skills: list[str] = Field(default_factory=list)
     missing_skills: list[str] = Field(default_factory=list)

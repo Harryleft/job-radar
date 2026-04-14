@@ -119,9 +119,11 @@ class TestCareerPathToProfile:
         path = self._make_path()
         profile = career_path_to_profile(path, extract)
 
-        assert profile.scoring.skill == 0.4
-        assert profile.scoring.experience == 0.3
-        assert profile.scoring.salary == 0.3
+        assert profile.scoring.skill == 0.3
+        assert profile.scoring.experience == 0.25
+        assert profile.scoring.salary == 0.2
+        assert profile.scoring.education == 0.1
+        assert profile.scoring.company == 0.15
 
     def test_junior_level(self):
         extract = self._make_extract(years=1)

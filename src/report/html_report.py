@@ -77,6 +77,8 @@ def generate_html_report(report_data: dict | Path | str) -> str:
                 ("技能", "skill_overlap", "#6366f1"),
                 ("经验", "experience_match", "#10b981"),
                 ("薪资", "salary_fit", "#f59e0b"),
+                ("学历", "education_match", "#8b5cf6"),
+                ("公司", "company_quality", "#06b6d4"),
             ]:
                 val = j.get(dim_key)
                 if val is not None:

@@ -41,6 +41,7 @@ def career_path_to_profile(
             years=extracted.experience_years,
             level=_infer_level(extracted.experience_years),
         ),
+        education=extracted.education,
         preferences=Preferences(salary_min=salary_min, salary_max=salary_max),
         target_roles=[path.title],
         scoring=ScoringWeights(),

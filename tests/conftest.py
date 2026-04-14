@@ -83,6 +83,7 @@ def sample_profile() -> UserProfile:
     return UserProfile(
         skills=["Python", "SQL", "数据分析", "产品设计"],
         experience=ExperienceInfo(years=5, level="mid-senior"),
+        education="本科",
         preferences=Preferences(
             cities=["上海", "北京", "深圳"],
             salary_min=15000,

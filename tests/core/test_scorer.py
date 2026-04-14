@@ -28,10 +28,12 @@ class TestRuleBasedScorer:
         salary_min=15000,
         salary_max=35000,
         weights=None,
+        education="本科",
     ):
         return UserProfile(
             skills=skills or ["Python", "SQL", "数据分析"],
             experience=ExperienceInfo(years=years),
+            education=education,
             preferences=Preferences(salary_min=salary_min, salary_max=salary_max),
             scoring=weights or ScoringWeights(),
         )
@@ -41,6 +43,9 @@ class TestRuleBasedScorer:
         skills=None,
         salary_desc="20-30K",
         experience="3-5年",
+        degree="本科",
+        scale="",
+        stage="",
     ):
         return Job(
             jobName="测试岗位",
@@ -48,8 +53,10 @@ class TestRuleBasedScorer:
             cityName="上海",
             skills=skills or ["Python", "SQL"],
             jobExperience=experience,
-            jobDegree="本科",
+            jobDegree=degree,
             brandName="测试公司",
+            scaleName=scale,
+            stageName=stage,
         )
 
     """3 信号完整评分"""
@@ -129,7 +136,9 @@ class TestRuleBasedScorer:
     """自定义权重"""
 
     def test_custom_weights(self):
-        weights = ScoringWeights(skill=0.5, experience=0.3, salary=0.2)
+        weights = ScoringWeights(
+            skill=0.5, experience=0.3, salary=0.2, education=0.0, company=0.0
+        )
         profile = self._make_profile(
             skills=["Python"], years=4, salary_min=20000, salary_max=30000, weights=weights
         )
@@ -166,3 +175,72 @@ class TestRuleBasedScorer:
         result = scorer.score(job, profile)
 
         assert result.experience_match == 1.0
+
+    """学历匹配"""
+
+    def test_education_meets_requirement(self):
+        profile = self._make_profile(skills=["Python"], education="硕士")
+        job = self._make_job(skills=["Python"], degree="本科")
+        scorer = RuleBasedScorer()
+        result = scorer.score(job, profile)
+
+        assert result.education_match == 1.0
+
+    def test_education_below_requirement(self):
+        profile = self._make_profile(skills=["Python"], education="大专")
+        job = self._make_job(skills=["Python"], degree="本科")
+        scorer = RuleBasedScorer()
+        result = scorer.score(job, profile)
+
+        assert result.education_match == 0.3
+
+    def test_education_no_limit(self):
+        profile = self._make_profile(skills=["Python"], education="本科")
+        job = self._make_job(skills=["Python"], degree="学历不限")
+        scorer = RuleBasedScorer()
+        result = scorer.score(job, profile)
+
+        assert result.education_match is None
+
+    def test_education_empty_profile(self):
+        profile = self._make_profile(skills=["Python"], education="")
+        job = self._make_job(skills=["Python"], degree="本科")
+        scorer = RuleBasedScorer()
+        result = scorer.score(job, profile)
+
+        assert result.education_match is None
+
+    """公司质量"""
+
+    def test_company_large_listed(self):
+        profile = self._make_profile(skills=["Python"])
+        job = self._make_job(skills=["Python"], scale="10000人以上", stage="已上市")
+        scorer = RuleBasedScorer()
+        result = scorer.score(job, profile)
+
+        assert result.company_quality == 1.0
+
+    def test_company_small_unfunded(self):
+        profile = self._make_profile(skills=["Python"])
+        job = self._make_job(skills=["Python"], scale="0-99人", stage="未融资")
+        scorer = RuleBasedScorer()
+        result = scorer.score(job, profile)
+
+        assert result.company_quality is not None
+        assert result.company_quality < 0.5
+
+    def test_company_no_info(self):
+        profile = self._make_profile(skills=["Python"])
+        job = self._make_job(skills=["Python"], scale="", stage="")
+        scorer = RuleBasedScorer()
+        result = scorer.score(job, profile)
+
+        assert result.company_quality is None
+
+    def test_company_partial_info(self):
+        profile = self._make_profile(skills=["Python"])
+        job = self._make_job(skills=["Python"], scale="1000-9999人", stage="")
+        scorer = RuleBasedScorer()
+        result = scorer.score(job, profile)
+
+        assert result.company_quality == 0.8

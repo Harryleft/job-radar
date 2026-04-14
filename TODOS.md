@@ -1,4 +1,4 @@
-# TODOS — Job Detect
+# TODOS — Job Radar
 
 ## 构建原则
 
@@ -38,7 +38,7 @@
 - **Where:** `src/core/experience_parser.py` (new file)
 - **Effort:** S (human: ~2h / CC: ~10min)
 
-### `job-detect init` Command
+### `job-radar init` Command
 - **What:** Interactive CLI command that asks 5 questions (skills, experience, cities, salary range, target roles) and generates `profile.yaml`.
 - **Why:** Outside voice flagged: YAML profile is a massive onboarding barrier. An init command makes the tool usable in 60 seconds.
 - **Where:** `src/cli/main.py` (new Typer command)
@@ -156,7 +156,7 @@
 - **可行方案:**
   1. 写一个 Tampermonkey 油猴脚本，通过 GM_cookie API 读取 HttpOnly cookie
   2. 或写一个 Chrome 扩展，用 `chrome.cookies.getAll()` 提取并一键复制
-  3. 或在 job-detect CLI 中加 `job-detect login` 命令，自动从浏览器 cookie 数据库文件提取（Windows 下 Chrome cookie 存在 `%LOCALAPPDATA%\Google\Chrome\User Data\Default\Cookies`，需要解密）
+  3. 或在 job-radar CLI 中加 `job-radar login` 命令，自动从浏览器 cookie 数据库文件提取（Windows 下 Chrome cookie 存在 `%LOCALAPPDATA%\Google\Chrome\User Data\Default\Cookies`，需要解密）
 - **Where:** 独立工具或 `src/cli/main.py` 新命令
 - **Effort:** M (human: ~4h / CC: ~30min)
 
@@ -175,6 +175,44 @@
 - Compare skills demand across multiple data snapshots
 - Requires: >= 3 snapshots accumulated at `data/snapshots/YYYY-MM-DD.json`
 - Trigger: User has accumulated historical exports
+
+## P3 (产品级改进 — 从 review 识别)
+
+> 来源: 产品视角全链路 review（2026-04-13）
+
+### 数据采集稳定性
+- **What:** 解决 BOSS直聘 `__zp_stoken__` 4-5 次请求过期的问题，或接入其他数据源（拉勾、猎聘、招聘网站 RSS）。
+- **Why:** 60 条杭州岗位覆盖面太窄。没有足够数据，AI 分析和匹配推荐都在小样本上推理，结论不可靠。数据是 0 和 1 的区别。
+- **Blocked by:** BOSS直聘反爬机制；或需要调研替代数据源
+
+### 对话式交互
+- **What:** 让用户在推荐基础上追问、排除、细化方向（如"我不太想做大模型开发，更偏向产品方向"），而不是每次从零跑 advisor。
+- **Why:** 当前 advisor 是一次性快照输出，真正的职业规划需要来回探讨。没有反馈回路，用户无法在推荐基础上深入。
+- **Where:** `src/ai/chains.py` 需要支持 multi-turn context；CLI 或 Web UI 需要交互循环
+
+### 公司质量信号
+- **What:** 将融资轮次、公司规模、行业口碑等信号融入评分，而不只是展示。
+- **Why:** 同样是"Python 开发"，华为外包和字节跳动含金量完全不同。当前 `company_scale` / `company_stage` 展示了但没参与评分，用户无法据此做判断。
+- **Where:** `src/core/scorer.py` 新增 company_quality 信号维度
+
+### 岗位新鲜度
+- **What:** 在数据采集中记录抓取时间戳，展示时标注"发布于 N 天前"，过期岗位自动降权或过滤。
+- **Why:** 用户不知道岗位是一周前发的还是三个月前发的。过时岗位浪费投递精力。
+
+### 经验不足求职者的匹配策略
+- **What:** 对低经验用户（<2 年），改变匹配策略：不扣分而是标注"能力差距"，鼓励广投 + 面试练手。
+- **Why:** 当前经验匹配是线性的，"1 年经验投 3-5 年岗位"匹配度被压到很低。实际上应届/初级求职者应该广投，工具应该鼓励而不是劝退。
+- **Where:** `src/core/scorer.py` 经验匹配逻辑
+
+### 技能深度区分
+- **What:** 区分"会 Python"和"能做 Pandas + Scikit-learn 风控模型"的深度差异，而不仅仅做别名归一化。
+- **Why:** 当前 overlap 百分比无法表达技能深度差距。用户看了 50% 匹配度，不知道差距在哪。
+- **Where:** `src/core/normalizer.py` + `src/core/scorer.py`；可能需要 LLM 辅助技能语义匹配
+
+### 投递跟踪闭环
+- **What:** 加入投递记录、面试反馈收集、基于结果的推荐校准。形成 推荐 → 投递 → 反馈 → 调整 的闭环。
+- **Why:** 当前只有推荐第一步，没有投递记录、没有面试反馈、没有模型校准。每次使用从零开始，没有留存价值。这决定用户会不会回来。
+- **Where:** 需要本地存储（SQLite 或 JSON），新增 CLI 命令 `track`/`feedback`
 
 ## Deferred (no timeline)
 

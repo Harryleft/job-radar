@@ -172,7 +172,7 @@ def generate_html_report(report_data: dict | Path | str) -> str:
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Job Detect — 职业路径推荐报告</title>
+<title>Job Radar — 职业路径推荐报告</title>
 <style>
 :root {{
     --bg: #0f172a;
@@ -556,7 +556,7 @@ td {{
 
 <!-- Hero -->
 <div class="hero">
-    <h1>Job Detect 职业路径推荐报告</h1>
+    <h1>Job Radar 职业路径推荐报告</h1>
     <div class="subtitle">基于简历 AI 分析 + {total_jobs} 个杭州岗位市场数据</div>
     <div class="meta">生成时间: {now} | 数据来源: BOSS直聘</div>
 </div>
@@ -635,7 +635,7 @@ td {{
 </div>
 
 <div class="footer">
-    Job Detect — 不是搜索工具，是决策工具 | 数据仅供参考
+    Job Radar — 岗位雷达，不是搜索工具，是决策工具 | 数据仅供参考
 </div>
 
 </div>

@@ -3,9 +3,9 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "job-detect"
+name = "job-radar"
 version = "0.1.0"
-description = "求职决策 CLI — 不是搜索工具，是决策工具"
+description = "求职决策 CLI — 岗位雷达，不是搜索工具，是决策工具"
 requires-python = ">=3.10"
 dependencies = [
     "typer>=0.12",
@@ -26,7 +26,7 @@ dev = [
 ]
 
 [project.scripts]
-job-detect = "src.cli.main:app"
+job-radar = "src.cli.main:app"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]

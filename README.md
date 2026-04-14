@@ -1,8 +1,8 @@
-# Job Detect
+# Job Radar
 
-> 求职决策 CLI — 不是搜索工具，是决策工具
+> 求职决策 CLI — 岗位雷达，不是搜索工具，是决策工具
 
-Job Detect 是一个命令行工具，基于 AI 简历分析 + BOSS直聘岗位数据，给出**职业路径推荐、匹配评分、市场分析和技能差距报告**，帮助你在求职过程中做出更好的决策。
+Job Radar 是一个命令行工具，基于 AI 简历分析 + BOSS直聘岗位数据，给出**职业路径推荐、匹配评分、市场分析和技能差距报告**，帮助你在求职过程中做出更好的决策。
 
 ## 功能概览
 
@@ -73,7 +73,7 @@ src/
 
 ```bash
 git clone <repo-url>
-cd job-detect
+cd job-radar
 
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
@@ -93,32 +93,32 @@ export ZHIPU_API_KEY=your_key_here
 
 ```bash
 # 上传简历 → AI 分析 → 职业路径推荐 + 市场匹配
-job-detect advisor --resume data/resumes/resume.pdf --data data/jobs.json
+job-radar advisor --resume data/resumes/resume.pdf --data data/jobs.json
 
 # 同时生成可视化 HTML 报告
-job-detect advisor -r data/resumes/resume.pdf -d data/jobs.json --html
+job-radar advisor -r data/resumes/resume.pdf -d data/jobs.json --html
 
 # 只做简历分析（不需要岗位数据）
-job-detect advisor -r data/resumes/resume.pdf
+job-radar advisor -r data/resumes/resume.pdf
 
 # 自定义路径数量
-job-detect advisor -r resume.pdf -d jobs.json --paths 5 --top 10
+job-radar advisor -r resume.pdf -d jobs.json --paths 5 --top 10
 ```
 
 ### 方式二：配置文件驱动
 
 ```bash
 # 交互式生成配置
-job-detect init --output profile.yaml
+job-radar init --output profile.yaml
 
 # 完整分析
-job-detect analyze --data data/jobs.json --profile profile.yaml
+job-radar analyze --data data/jobs.json --profile profile.yaml
 
 # 仅匹配排名
-job-detect match -d data/jobs.json -p profile.yaml --top 10
+job-radar match -d data/jobs.json -p profile.yaml --top 10
 
 # 市场概览（不需要配置文件）
-job-detect market --data data/jobs.json --keyword Python
+job-radar market --data data/jobs.json --keyword Python
 ```
 
 ### 数据采集

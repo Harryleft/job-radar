@@ -34,8 +34,8 @@ from src.data.models import Job
 from src.data.profile import load_profile
 
 app = typer.Typer(
-    name="job-detect",
-    help="求职决策 CLI — 不是搜索工具，是决策工具",
+    name="job-radar",
+    help="求职决策 CLI — 岗位雷达，不是搜索工具，是决策工具",
     add_completion=False,
 )
 console = Console()
@@ -246,7 +246,7 @@ def init(
     output: str = typer.Option("profile.yaml", "--output", "-o", help="输出文件路径"),
 ) -> None:
     """交互式生成用户配置文件"""
-    console.print("[bold cyan]Job Detect — 配置文件生成器[/bold cyan]\n")
+    console.print("[bold cyan]Job Radar — 配置文件生成器[/bold cyan]\n")
 
     skills_str = console.input("[bold]你的技能[/bold] (逗号分隔): ")
     years_str = console.input("[bold]工作年限[/bold] (数字): ")
@@ -266,7 +266,7 @@ def init(
     out_path.write_text(content, encoding="utf-8")
     console.print(f"\n[green]配置文件已生成:[/green] {out_path.absolute()}")
     console.print(
-        "[dim]可以运行: job-detect analyze "
+        "[dim]可以运行: job-radar analyze "
         "--data ./jobs.json --profile ./profile.yaml[/dim]"
     )
 
@@ -275,7 +275,7 @@ def init(
 
 
 def _print_header() -> None:
-    console.print(Panel("Job Detect — 岗位匹配报告", style="bold cyan", padding=(1, 2)))
+    console.print(Panel("Job Radar — 岗位匹配报告", style="bold cyan", padding=(1, 2)))
 
 
 def _print_ranking_table(ranked: list) -> None:
@@ -461,7 +461,7 @@ def _print_path_comparison(
 ) -> None:
     """输出职业路径对比报告（统一表 + 分路径详情）"""
     # ─── 总览表 ───
-    console.print(Panel("Job Detect — 职业路径推荐报告", style="bold cyan", padding=(1, 2)))
+    console.print(Panel("Job Radar — 职业路径推荐报告", style="bold cyan", padding=(1, 2)))
     console.print(f"[dim]基于: 简历分析 + {len(jobs)} 个岗位数据[/dim]\n")
 
     summary_table = Table(show_lines=False, padding=(0, 1), title="推荐职业路径")

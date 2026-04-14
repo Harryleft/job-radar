@@ -73,7 +73,10 @@ class RuleBasedScorer(BaseScorer):
             job_hi = job_salary.max_monthly
             overlap = max(0, min(upper, job_hi) - max(lower, job_lo))
             span = max(job_hi - job_lo, 1)
-            salary_fit = overlap / span
+            # 定点薪资(如 20-20K)且落在期望区间内 → 完美匹配
+            salary_fit = (
+                1.0 if job_lo == job_hi and lower <= job_lo <= upper else overlap / span
+            )
         else:
             salary_fit = None
 

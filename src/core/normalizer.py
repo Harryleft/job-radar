@@ -22,6 +22,9 @@ def _build_lookup() -> dict[str, str]:
     lookup: dict[str, str] = {}
 
     config = _load_aliases()
+    if not isinstance(config, dict):
+        logger.warning("skill_aliases.yaml 顶层结构非 dict，归一化将使用原始名称")
+        return {}
     for canonical, aliases in config.items():
         if not isinstance(canonical, str):
             continue

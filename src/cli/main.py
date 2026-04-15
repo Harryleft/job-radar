@@ -271,6 +271,58 @@ def init(
     )
 
 
+# ─── login 命令 ───
+
+
+@app.command()
+def login(
+    check: bool = typer.Option(False, "--check", "-c", help="仅检查当前登录状态"),
+    manual: bool = typer.Option(False, "--manual", "-m", help="使用手动 Cookie 输入模式"),
+) -> None:
+    """BOSS直聘登录（CDP 自动提取 / 手动 Cookie 导入）"""
+    try:
+        from src.auth.playwright_login import (
+            CookieParseError,
+            MissingCookiesError,
+            cdp_login,
+            check_status,
+            manual_login,
+            save_credential,
+        )
+    except ImportError as exc:
+        console.print("[red]错误: auth 模块不可用[/red]")
+        raise typer.Exit(code=1) from exc
+
+    if check:
+        check_status()
+        return
+
+    try:
+        if manual:
+            cookies = manual_login()
+        else:
+            try:
+                cookies = cdp_login()
+            except RuntimeError as exc:
+                # CDP 不可用（Chrome 未找到 / Playwright 未安装），降级到手动模式
+                console.print(f"[yellow]{exc}[/yellow]")
+                console.print("[dim]降级到手动 Cookie 输入模式[/dim]\n")
+                cookies = manual_login()
+
+        path = save_credential(cookies)
+        console.print(f"\n[green]登录成功！[/green] 获取到 {len(cookies)} 个 cookie")
+        console.print(f"[dim]凭证已保存到: {path}[/dim]")
+        for key in ("__zp_stoken__", "wt2", "wbg", "zp_at"):
+            status = "[green]✓[/green]" if key in cookies else "[red]✗[/red]"
+            console.print(f"  {status} {key}")
+    except (CookieParseError, MissingCookiesError) as exc:
+        console.print(f"[red]{exc}[/red]")
+        raise typer.Exit(code=1) from exc
+    except KeyboardInterrupt:
+        console.print("\n[dim]已取消[/dim]")
+        raise typer.Exit(code=0) from None
+
+
 # ─── 输出格式化 ───
 
 

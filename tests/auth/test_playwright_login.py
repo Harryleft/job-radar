@@ -1,4 +1,4 @@
-"""测试 playwright_login 模块 — CDP 登录、手动登录、Cookie 解析与凭据持久化"""
+"""测试 playwright_login 模块 — CDP 自动登录、手动登录、Cookie 解析与凭据持久化"""
 
 from __future__ import annotations
 
@@ -13,9 +13,11 @@ from src.auth.playwright_login import (
     REQUIRED_COOKIES,
     ChromeNotFoundError,
     CookieParseError,
+    LoginTimeoutError,
     MissingCookiesError,
     _find_chrome,
     _parse_cookie_input,
+    _wait_for_login,
     cdp_login,
     check_status,
     load_credential,
@@ -45,6 +47,62 @@ class TestFindChrome:
         assert _find_chrome() is None
 
 
+# ── 自动登录检测测试 ──────────────────────────────────────────────────
+
+
+class TestWaitForLogin:
+    """测试自动登录检测轮询"""
+
+    def test_detects_redirect(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # 模拟页面已跳转到主页
+        fake_response = MagicMock()
+        fake_response.read.return_value = json.dumps(
+            [{"url": "https://www.zhipin.com/web/geek/job"}]
+        ).encode()
+        fake_response.__enter__ = MagicMock(return_value=fake_response)
+        fake_response.__exit__ = MagicMock(return_value=False)
+        monkeypatch.setattr("urllib.request.urlopen", lambda *a, **kw: fake_response)
+
+        _wait_for_login(9222, timeout=5)  # 应立即返回
+
+    def test_timeout_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # 模拟页面一直在登录页
+        fake_response = MagicMock()
+        fake_response.read.return_value = json.dumps(
+            [{"url": "https://www.zhipin.com/web/user/?ka=header-login"}]
+        ).encode()
+        fake_response.__enter__ = MagicMock(return_value=fake_response)
+        fake_response.__exit__ = MagicMock(return_value=False)
+        monkeypatch.setattr("urllib.request.urlopen", lambda *a, **kw: fake_response)
+        monkeypatch.setattr("time.sleep", lambda *a: None)  # 跳过 sleep 加速测试
+
+        with pytest.raises(LoginTimeoutError, match="登录超时"):
+            _wait_for_login(9222, timeout=1)
+
+    def test_connection_error_retries(self, monkeypatch: pytest.MonkeyPatch) -> None:
+        # 第一次连接失败，第二次返回已登录页面
+        call_count = 0
+        fake_response = MagicMock()
+        fake_response.read.return_value = json.dumps(
+            [{"url": "https://www.zhipin.com/"}]
+        ).encode()
+        fake_response.__enter__ = MagicMock(return_value=fake_response)
+        fake_response.__exit__ = MagicMock(return_value=False)
+
+        def mock_urlopen(*a, **kw):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise ConnectionRefusedError
+            return fake_response
+
+        monkeypatch.setattr("urllib.request.urlopen", mock_urlopen)
+        monkeypatch.setattr("time.sleep", lambda *a: None)
+
+        _wait_for_login(9222, timeout=5)
+        assert call_count == 2
+
+
 # ── CDP 登录测试 ──────────────────────────────────────────────────────
 
 
@@ -57,27 +115,26 @@ class TestCdpLogin:
             cdp_login()
 
     def test_successful_cdp_login(self, monkeypatch: pytest.MonkeyPatch) -> None:
-        # Mock Chrome 查找
         monkeypatch.setattr(
             "src.auth.playwright_login._find_chrome",
             lambda: Path("/fake/chrome.exe"),
         )
 
-        # Mock subprocess.Popen
         mock_proc = MagicMock()
         mock_proc.poll.return_value = None
         monkeypatch.setattr("subprocess.Popen", lambda *a, **kw: mock_proc)
-
-        # Mock tempfile.mkdtemp
         monkeypatch.setattr("tempfile.mkdtemp", lambda **kw: "/tmp/test-chrome")
-
-        # Mock input (用户按回车)
-        monkeypatch.setattr("builtins.input", lambda *a: "")
-
-        # Mock shutil.rmtree
         monkeypatch.setattr("shutil.rmtree", lambda *a, **kw: None)
+        monkeypatch.setattr("time.sleep", lambda *a: None)
 
-        # Mock Playwright CDP 提取
+        # Mock CDP 就绪和登录检测
+        monkeypatch.setattr(
+            "src.auth.playwright_login._wait_for_cdp_ready", lambda *a, **kw: None
+        )
+        monkeypatch.setattr(
+            "src.auth.playwright_login._wait_for_login", lambda *a, **kw: None
+        )
+
         fake_cookies = {
             "__zp_stoken__": "st_val",
             "wt2": "wt_val",
@@ -100,10 +157,15 @@ class TestCdpLogin:
         mock_proc = MagicMock()
         monkeypatch.setattr("subprocess.Popen", lambda *a, **kw: mock_proc)
         monkeypatch.setattr("tempfile.mkdtemp", lambda **kw: "/tmp/test-chrome")
-        monkeypatch.setattr("builtins.input", lambda *a: "")
         monkeypatch.setattr("shutil.rmtree", lambda *a, **kw: None)
+        monkeypatch.setattr("time.sleep", lambda *a: None)
+        monkeypatch.setattr(
+            "src.auth.playwright_login._wait_for_cdp_ready", lambda *a, **kw: None
+        )
+        monkeypatch.setattr(
+            "src.auth.playwright_login._wait_for_login", lambda *a, **kw: None
+        )
 
-        # 返回不完整的 cookies
         monkeypatch.setattr(
             "src.auth.playwright_login._extract_cookies_via_cdp",
             lambda pw_factory: {"wt2": "only"},

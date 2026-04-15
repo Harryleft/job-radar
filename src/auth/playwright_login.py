@@ -1,18 +1,20 @@
 """BOSS直聘登录 — CDP 连接真实 Chrome + 手动 Cookie 导入（降级方案）
 
 两种登录方式:
-  1. cdp_login()  — 启动真实 Chrome，用户扫码后通过 CDP 自动提取 Cookie（推荐）
+  1. cdp_login()  — 启动真实 Chrome，用户扫码后自动检测登录并提取 Cookie（推荐）
   2. manual_login() — 手动从浏览器 Cookie 管理页复制粘贴（降级方案）
 """
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import shutil
 import subprocess
 import tempfile
 import time
+import urllib.request
 import webbrowser
 from pathlib import Path
 
@@ -25,6 +27,8 @@ COOKIE_SETTINGS_URL = "edge://settings/siteData?search=zhipin.com"
 
 # Chrome 调试端口
 DEBUG_PORT = 9222
+# 登录超时（秒）
+LOGIN_TIMEOUT = 180
 
 # Windows Chrome 路径（按优先级搜索）
 _CHROME_SEARCH_PATHS = [
@@ -55,6 +59,10 @@ class PlaywrightNotInstalledError(RuntimeError):
     """Playwright 未安装"""
 
 
+class LoginTimeoutError(RuntimeError):
+    """登录超时"""
+
+
 # ── Chrome 查找 ───────────────────────────────────────────────────────
 
 
@@ -70,12 +78,12 @@ def _find_chrome() -> Path | None:
 
 
 def cdp_login() -> dict[str, str]:
-    """启动真实 Chrome，用户扫码后通过 CDP 自动提取 Cookie。
+    """启动真实 Chrome，自动检测登录后通过 CDP 提取 Cookie。
 
     流程:
       1. 启动独立 Chrome 实例（带调试端口 + 临时 profile）
       2. 打开登录页，用户扫码
-      3. 登录后跳转主页，等待 __zp_stoken__ JS 生成
+      3. 自动轮询检测登录成功（无需手动按回车）
       4. 通过 CDP 提取所有 Cookie（含 HttpOnly）
       5. 验证 4 个必需 Cookie 齐全
 
@@ -85,6 +93,7 @@ def cdp_login() -> dict[str, str]:
     Raises:
         ChromeNotFoundError: 未找到 Chrome
         PlaywrightNotInstalledError: Playwright 未安装
+        LoginTimeoutError: 3 分钟未登录
         MissingCookiesError: 缺少必需 Cookie
     """
     # 检查 Chrome
@@ -123,12 +132,15 @@ def cdp_login() -> dict[str, str]:
         ]
         proc = subprocess.Popen(cmd, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        # 等待用户扫码登录
-        print("请在 Chrome 中完成扫码登录，登录成功后按回车继续...")
-        input()
+        # 等待 Chrome 启动就绪
+        _wait_for_cdp_ready(DEBUG_PORT, timeout=15)
+
+        # 自动检测登录成功（无需手动操作）
+        print("请在 Chrome 中扫码登录（最长等待 3 分钟）...")
+        _wait_for_login(DEBUG_PORT, timeout=LOGIN_TIMEOUT)
 
         # 通过 CDP 连接并提取 Cookie
-        print("正在提取 Cookie...")
+        print("登录成功，正在提取 Cookie...")
         cookie_dict = _extract_cookies_via_cdp(sync_playwright)
 
         # 验证
@@ -142,11 +154,47 @@ def cdp_login() -> dict[str, str]:
         # 清理
         if proc and proc.poll() is None:
             proc.terminate()
-            try:
+            with contextlib.suppress(subprocess.TimeoutExpired):
                 proc.wait(timeout=5)
-            except subprocess.TimeoutExpired:
+            if proc.poll() is None:
                 proc.kill()
         shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+def _wait_for_cdp_ready(port: int, timeout: int = 15) -> None:
+    """等待 Chrome CDP 端口就绪"""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/json/version", timeout=2):
+                return
+        except Exception:
+            time.sleep(0.5)
+    raise ChromeNotFoundError("Chrome 启动超时")
+
+
+def _wait_for_login(port: int, timeout: int = LOGIN_TIMEOUT) -> None:
+    """轮询 CDP 页面列表，自动检测登录成功。
+
+    登录前页面 URL 包含 /web/user/ 或 /passport-，
+    登录成功后会跳转到主页或首页。
+    """
+    login_patterns = ("/web/user/", "/passport-", "about:blank")
+    deadline = time.monotonic() + timeout
+
+    while time.monotonic() < deadline:
+        try:
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/json/list", timeout=2) as resp:
+                pages = json.loads(resp.read())
+                for page in pages:
+                    url = page.get("url", "")
+                    if url and not any(p in url for p in login_patterns):
+                        return  # 页面已离开登录页
+        except Exception:
+            pass
+        time.sleep(2)
+
+    raise LoginTimeoutError(f"登录超时（{timeout} 秒），请重试")
 
 
 def _extract_cookies_via_cdp(sync_playwright_factory) -> dict[str, str]:
@@ -163,9 +211,6 @@ def _extract_cookies_via_cdp(sync_playwright_factory) -> dict[str, str]:
 
         if "zhipin.com" not in (page.url or ""):
             page.goto(BOSS_BASE_URL, wait_until="domcontentloaded", timeout=10000)
-            # 等待 __zp_stoken__ 生成
-            import contextlib
-
             with contextlib.suppress(Exception):
                 page.wait_for_function(
                     'document.cookie.includes("__zp_stoken__")',
@@ -297,7 +342,7 @@ def check_status() -> None:
     """打印当前凭据状态（用于 CLI 输出）。"""
     cookies = load_credential()
     if not cookies:
-        print("未登录 — 请运行: python scripts/boss_login.py")
+        print("未登录 — 请运行: boss-login")
         return
 
     missing = sorted(REQUIRED_COOKIES - set(cookies.keys()))

@@ -29,7 +29,12 @@ dev = [
 ]
 
 [project.scripts]
-job-radar = "src.cli.main:app"
+boss-analyze = "src.cli.main:analyze"
+boss-match = "src.cli.main:match"
+boss-market = "src.cli.main:market"
+boss-advisor = "src.cli.main:advisor"
+boss-init = "src.cli.main:init"
+boss-login = "src.cli.main:login"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src"]

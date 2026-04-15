@@ -41,6 +41,8 @@ src/
 │   ├── matcher.py            # 岗位匹配器
 │   ├── recommender.py        # 推荐排序 + 技能差距报告
 │   └── market.py             # 市场分析
+├── auth/
+│   └── playwright_login.py  # BOSS直聘登录（CDP + 手动降级）
 ├── cli/
 │   └── main.py               # CLI 入口（Typer 命令定义）
 ├── core/
@@ -93,32 +95,32 @@ export ZHIPU_API_KEY=your_key_here
 
 ```bash
 # 上传简历 → AI 分析 → 职业路径推荐 + 市场匹配
-job-radar advisor --resume data/resumes/resume.pdf --data data/jobs.json
+boss-advisor --resume data/resumes/resume.pdf --data data/jobs.json
 
 # 同时生成可视化 HTML 报告
-job-radar advisor -r data/resumes/resume.pdf -d data/jobs.json --html
+boss-advisor -r data/resumes/resume.pdf -d data/jobs.json --html
 
 # 只做简历分析（不需要岗位数据）
-job-radar advisor -r data/resumes/resume.pdf
+boss-advisor -r data/resumes/resume.pdf
 
 # 自定义路径数量
-job-radar advisor -r resume.pdf -d jobs.json --paths 5 --top 10
+boss-advisor -r resume.pdf -d jobs.json --paths 5 --top 10
 ```
 
 ### 方式二：配置文件驱动
 
 ```bash
 # 交互式生成配置
-job-radar init --output profile.yaml
+boss-init --output profile.yaml
 
 # 完整分析
-job-radar analyze --data data/jobs.json --profile profile.yaml
+boss-analyze --data data/jobs.json --profile profile.yaml
 
 # 仅匹配排名
-job-radar match -d data/jobs.json -p profile.yaml --top 10
+boss-match -d data/jobs.json -p profile.yaml --top 10
 
 # 市场概览（不需要配置文件）
-job-radar market --data data/jobs.json --keyword Python
+boss-market --data data/jobs.json --keyword Python
 ```
 
 ### 数据采集
@@ -126,8 +128,11 @@ job-radar market --data data/jobs.json --keyword Python
 使用 `scripts/fetch_jobs.py` 从 BOSS直聘批量采集岗位数据：
 
 ```bash
-# 先登录
-boss login
+# 先登录（CDP 自动提取 Cookie，扫码后自动完成）
+boss-login
+
+# 检查登录状态
+boss-login --check
 
 # 运行采集（5 个城市 × 4 个关键词）
 python scripts/fetch_jobs.py
@@ -144,11 +149,12 @@ python scripts/fetch_jobs.py
 
 | 命令 | 说明 | 必需参数 |
 |------|------|----------|
-| `advisor` | 简历驱动：AI 分析 → 职业路径 → 岗位匹配 | `--resume` |
-| `analyze` | 完整分析：排名 + 技能差距 + 市场 | `--data`, `--profile` |
-| `match` | 仅输出匹配排名 | `--data`, `--profile` |
-| `market` | 市场概览（无需配置） | `--data` |
-| `init` | 交互式生成配置文件 | — |
+| `boss-login` | BOSS直聘登录（CDP 自动提取 Cookie） | — |
+| `boss-advisor` | 简历驱动：AI 分析 → 职业路径 → 岗位匹配 | `--resume` |
+| `boss-analyze` | 完整分析：排名 + 技能差距 + 市场 | `--data`, `--profile` |
+| `boss-match` | 仅输出匹配排名 | `--data`, `--profile` |
+| `boss-market` | 市场概览（无需配置） | `--data` |
+| `boss-init` | 交互式生成配置文件 | — |
 
 ### advisor 选项
 
@@ -173,7 +179,7 @@ python scripts/fetch_jobs.py
 ## 开发
 
 ```bash
-pytest                  # 运行测试（113 个用例）
+pytest                  # 运行测试（160 个用例）
 ruff check src/ tests/  # Lint
 ruff format src/ tests/ # 格式化
 ```

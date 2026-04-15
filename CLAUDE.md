@@ -5,12 +5,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 常用命令
 
 ```bash
-pytest                          # 运行全部测试（113 个用例）
+pytest                          # 运行全部测试（160 个用例）
 pytest tests/core/test_scorer.py -x   # 运行单个测试文件
 pytest -k "test_salary"         # 按名称匹配运行测试
-ruff check src/ tests/          # Lint
-ruff format src/ tests/         # 格式化
-python -m src.cli.main --help   # 运行 CLI（开发模式，安装后为 job-radar）
+python -m src.cli.main --help   # 运行 CLI（开发模式）
+boss-login                      # BOSS直聘 CDP 登录（安装后）
+boss-analyze                    # 完整分析（安装后）
 ```
 
 AI 功能需要环境变量 `ZHIPU_API_KEY`。
@@ -54,5 +54,6 @@ YAML profile → UserProfile → Matcher + RuleBasedScorer → 排名输出
 - `src/` 源码，`tests/` 测试，二者目录结构保持一致
 - `data/samples/` 测试用模拟数据（在 git 中），其他 data 目录已 gitignore（含简历、真实岗位数据等敏感信息）
 - `scripts/fetch_jobs.py` BOSS直聘数据采集脚本，使用 `boss_cli.client.BossClient` 直接 API 调用
+- `src/auth/playwright_login.py` BOSS直聘登录模块（CDP 自动提取 / 手动 Cookie 导入）
 - `reports/` 生成的 HTML 报告（已 gitignore）
 - `src/report/html_report.py` HTML 报告生成器，接收 dict 数据输出完整 HTML 文件

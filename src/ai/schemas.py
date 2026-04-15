@@ -6,13 +6,17 @@ from pydantic import BaseModel, model_validator
 
 
 class ResumeExtract(BaseModel):
-    """Chain 1 输出: 简历结构化提取"""
+    """Chain 1 输出: 简历 / 背景文本结构化提取"""
 
     skills: list[str]
     experience_years: int
     education: str = ""
     work_history: list[str] = []
     highlights: list[str] = []
+    # 背景叙事维度（纯文本输入时填充，PDF 输入时默认为空）
+    location_preferences: list[str] = []
+    life_context: str = ""
+    career_goals: str = ""
 
 
 class CareerPath(BaseModel):

@@ -13,7 +13,7 @@ import re
 from langchain_openai import ChatOpenAI
 from pydantic import ValidationError
 
-from src.ai.prompts import EXTRACT_PROMPT, RECOMMEND_PROMPT
+from src.ai.prompts import BACKGROUND_EXTRACT_PROMPT, EXTRACT_PROMPT, RECOMMEND_PROMPT
 from src.ai.schemas import CareerRecommendation, ResumeExtract
 
 # ─── LLM 实例 ───
@@ -64,6 +64,24 @@ def run_extract(resume_markdown: str) -> ResumeExtract:
     """Chain 1: 从简历 Markdown 提取结构化信息（带重试）"""
     llm = _make_llm()
     messages = EXTRACT_PROMPT.format_messages(resume_markdown=resume_markdown)
+
+    last_err = None
+    for _ in range(_MAX_RETRIES):
+        try:
+            response = llm.invoke(messages)
+            raw = _extract_json_from_text(response.content)
+            return ResumeExtract.model_validate_json(raw)
+        except (json.JSONDecodeError, ValidationError) as exc:
+            last_err = exc
+            continue
+
+    raise last_err  # type: ignore[misc]
+
+
+def run_extract_background(background_text: str) -> ResumeExtract:
+    """Chain 1b: 从自由文本背景描述提取结构化信息（带重试）"""
+    llm = _make_llm()
+    messages = BACKGROUND_EXTRACT_PROMPT.format_messages(background_text=background_text)
 
     last_err = None
     for _ in range(_MAX_RETRIES):

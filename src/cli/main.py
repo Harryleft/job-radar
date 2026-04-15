@@ -21,7 +21,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.table import Table
 
-from src.ai.chains import run_extract, run_recommend
+from src.ai.chains import run_extract, run_extract_background, run_recommend
 from src.ai.profile_builder import career_path_to_profile
 from src.ai.resume_parser import pdf_to_markdown
 from src.ai.schemas import CareerRecommendation, ResumeExtract
@@ -178,28 +178,41 @@ def market(
 
 @app.command()
 def advisor(
-    resume: str = typer.Option(..., "--resume", "-r", help="简历 PDF 文件路径"),
+    resume: str = typer.Option("", "--resume", "-r", help="简历 PDF 文件路径"),
+    text: str = typer.Option("", "--text", "-t", help="背景文本文件路径（.txt/.md）"),
     data: str = typer.Option(
-        "", "--data", "-d", help="岗位数据 JSON 文件路径（省略则只做简历分析）"
+        "", "--data", "-d", help="岗位数据 JSON 文件路径（省略则只做背景分析）"
     ),
     paths: int = typer.Option(3, "--paths", "-p", help="推荐职业路径数量 (1-5)"),
-    top: int = typer.Option(10, "--top", "-t", help="每条路径显示前 N 个匹配岗位"),
+    top: int = typer.Option(10, "--top", help="每条路径显示前 N 个匹配岗位"),
     html: bool = typer.Option(False, "--html", help="同时生成可视化 HTML 报告"),
 ) -> None:
-    """简历驱动的职业路径推荐：上传简历 → AI 分析 → 推荐职业方向 → 市场对比"""
+    """AI 职业路径推荐：上传简历或背景文本 → AI 分析 → 推荐方向 → 市场对比"""
     # 参数校验
+    if not resume and not text:
+        console.print("[red]请提供 --resume（PDF）或 --text（文本文件）[/red]")
+        raise typer.Exit(code=1)
+    if resume and text:
+        console.print("[red]--resume 和 --text 不能同时使用[/red]")
+        raise typer.Exit(code=1)
     if paths < 1 or paths > 5:
         console.print("[red]--paths 参数必须在 1-5 之间[/red]")
         raise typer.Exit(code=1)
 
     try:
-        # Step 1: PDF → Markdown
-        console.print("[dim]正在解析简历...[/dim]")
-        md_text = pdf_to_markdown(resume)
+        # Step 1: 输入 → 结构化提取
+        if resume:
+            console.print("[dim]正在解析简历...[/dim]")
+            md_text = pdf_to_markdown(resume)
+            console.print("[dim]正在分析简历内容...[/dim]")
+            extract = run_extract(md_text)
+        else:
+            console.print("[dim]正在读取背景文本...[/dim]")
+            text_path = Path(text)
+            bg_text = text_path.read_text(encoding="utf-8")
+            console.print("[dim]正在分析个人背景...[/dim]")
+            extract = run_extract_background(bg_text)
 
-        # Step 2: Chain 1 — 结构化提取
-        console.print("[dim]正在分析简历内容...[/dim]")
-        extract = run_extract(md_text)
         _print_extract_summary(extract)
 
         # Step 3: Chain 2 — 职业路径推荐
@@ -483,8 +496,8 @@ def _build_report_data(
 
 
 def _print_extract_summary(extract: ResumeExtract) -> None:
-    """打印简历提取摘要"""
-    console.print("\n[bold]简历分析摘要[/bold]")
+    """打印背景分析摘要"""
+    console.print("\n[bold]背景分析摘要[/bold]")
     console.rule()
     console.print(f" 技能: {', '.join(extract.skills)}")
     console.print(f" 工作年限: {extract.experience_years} 年")
@@ -492,6 +505,13 @@ def _print_extract_summary(extract: ResumeExtract) -> None:
         console.print(f" 学历: {extract.education}")
     if extract.highlights:
         console.print(f" 亮点: {'; '.join(extract.highlights[:3])}")
+    if extract.location_preferences:
+        console.print(f" 城市偏好: {', '.join(extract.location_preferences)}")
+    if extract.life_context:
+        display = extract.life_context[:60] + ("..." if len(extract.life_context) > 60 else "")
+        console.print(f" 生活背景: {display}")
+    if extract.career_goals:
+        console.print(f" 职业目标: {extract.career_goals}")
 
 
 def _print_recommendation_only(
